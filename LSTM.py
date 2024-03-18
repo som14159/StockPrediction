@@ -75,3 +75,26 @@ for i, ax in enumerate(axs.flat):
         ax.legend()
 
 plt.show()
+
+import json
+
+# Extract predictions
+open_value, high_value, close_value, low_value, volume_value = predictions.flatten()
+
+# Create data dictionary
+data = {
+    "open": float(open_value),
+    "high": float(high_value),
+    "close": float(close_value),
+    "low": float(low_value),
+    "volume": float(volume_value)
+}
+
+# File path
+file_path = "StockData.json"
+
+# Write data to the JSON file
+with open(file_path, "w") as json_file:
+    json.dump(data, json_file)
+
+print("Data has been written to 'data.json'.")
