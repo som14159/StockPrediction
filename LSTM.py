@@ -97,4 +97,4 @@ file_path = "StockData.json"
 with open(file_path, "w") as json_file:
     json.dump(data, json_file)
 
-print("Data has been written to 'data.json'.")
+print("Data has been written to 'StockData.json'.")
