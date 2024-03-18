@@ -1,90 +1,77 @@
 import pandas as pd
-import numpy as np
-from sklearn.preprocessing import MinMaxScaler
-from keras.models import Sequential
-from keras.layers import LSTM, Dense
-from datetime import datetime
-
-# Load the data
 df = pd.read_csv('DailyStockPrices.csv')
+print(df.head())
+df = df.loc[::-1].reset_index(drop=True)
+print(df.head())
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dense
 
-# Convert the 'date' column to datetime type
-df['date'] = pd.to_datetime(df['date'])
+X = df.index.values.reshape(-1, 1)  # Reshape to make it 2D
+y = df[['1. open', '2. high', '4. close', '3. low', '5. volume']].values
+print(X)
+print(y)
+# Split data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.0000000000001, random_state=42)
 
-# Sort the DataFrame by date
-df.sort_values(by='date', inplace=True)
+# Scale the features
+scaler_X = MinMaxScaler()
+X_train_scaled = scaler_X.fit_transform(X_train)
+X_test_scaled = scaler_X.transform(X_test)
 
-# Extract the target variables
-y_open = df['1. open'].values.reshape(-1, 1)
-y_high = df['2. high'].values.reshape(-1, 1)
-y_close = df['4. close'].values.reshape(-1, 1)
-y_volume = df['5. volume'].values.reshape(-1, 1)
+# Scale the target variable
+scaler_y = MinMaxScaler()
+y_train_scaled = scaler_y.fit_transform(y_train)
+y_test_scaled = scaler_y.transform(y_test)
 
-# Normalize the target variables
-scaler_open = MinMaxScaler(feature_range=(0, 1))
-scaler_high = MinMaxScaler(feature_range=(0, 1))
-scaler_close = MinMaxScaler(feature_range=(0, 1))
-scaler_volume = MinMaxScaler(feature_range=(0, 1))
-y_open_scaled = scaler_open.fit_transform(y_open)
-y_high_scaled = scaler_high.fit_transform(y_high)
-y_close_scaled = scaler_close.fit_transform(y_close)
-y_volume_scaled = scaler_volume.fit_transform(y_volume)
+# Reshape input data for LSTM
+X_train_scaled = X_train_scaled.reshape((X_train_scaled.shape[0], 1, X_train_scaled.shape[1]))
+X_test_scaled = X_test_scaled.reshape((X_test_scaled.shape[0], 1, X_test_scaled.shape[1]))
 
-# Define a function to create the LSTM model
-def create_lstm_model(input_shape):
-    model = Sequential()
-    model.add(LSTM(units=50, return_sequences=True, input_shape=input_shape))
-    model.add(LSTM(units=50, return_sequences=False))
-    model.add(Dense(units=1))
-    model.compile(optimizer='adam', loss='mean_squared_error')
-    return model
+# Define the LSTM model
+model = Sequential()
+model.add(LSTM(50, activation='relu', input_shape=(1, X_train_scaled.shape[2])))
+model.add(Dense(5))  
+model.compile(optimizer='adam', loss='mse')
 
+# Fit the model
+model.fit(X_train_scaled, y_train_scaled, epochs=50, batch_size=32, verbose=1)
 
-# Function to prepare the data for training the LSTM model
-def prepare_data_for_lstm(df, window_size=60):
-    X = []
-    y = []
-    for i in range(window_size, len(df)):
-        X.append(df['date'].iloc[i-window_size:i].astype(int))  # Convert datetime to integer
-        y.append(df['4. close'].iloc[i])
-    X, y = np.array(X), np.array(y)
-    X = np.reshape(X, (X.shape[0], X.shape[1], 1))
-    return X, y
+# Evaluate the model
+loss = model.evaluate(X_test_scaled, y_test_scaled, verbose=0)
+print('Test loss:', loss)
 
+# Make predictions
+predictions = model.predict(X_test_scaled)
 
-# Prepare the data for training
-X_open, y_open = prepare_data_for_lstm(df)
-X_high, y_high = prepare_data_for_lstm(df)
-X_close, y_close = prepare_data_for_lstm(df)
-X_volume, y_volume = prepare_data_for_lstm(df)
+predictions = scaler_y.inverse_transform(predictions)
 
-# Create and train the LSTM models
-model_open = create_lstm_model(input_shape=(X_open.shape[1], 1))
-model_open.fit(X_open, y_open, epochs=100, batch_size=32)
+print("Predictions:")
+for i in range(len(predictions)):
+    print("Predicted:", predictions[i])
+    print("Actual:", y_test[i])
 
-model_high = create_lstm_model(input_shape=(X_high.shape[1], 1))
-model_high.fit(X_high, y_high, epochs=100, batch_size=32)
+tommorow=[[100]]
+tommorow = scaler_X.transform(tommorow)
+tommorow = tommorow.reshape((tommorow.shape[0], 1, tommorow.shape[1]))
+predictions = model.predict(tommorow)
+predictions = scaler_y.inverse_transform(predictions)
+print("Tommorows Predictions: ",predictions)
 
-model_close = create_lstm_model(input_shape=(X_close.shape[1], 1))
-model_close.fit(X_close, y_close, epochs=100, batch_size=32)
+X = np.concatenate((X, [[100]]))
+y = np.concatenate((y, predictions))
 
-model_volume = create_lstm_model(input_shape=(X_volume.shape[1], 1))
-model_volume.fit(X_volume, y_volume, epochs=100, batch_size=32)
+# Plot updated values
+fig, axs = plt.subplots(5, 1, figsize=(12, 10))
 
-# Function to predict the stock prices for the current date
-def predict_stock_prices(model, scaler):
-    current_date = datetime.now().strftime('%Y-%m-%d')
-    X_input = np.array([pd.to_datetime(current_date).timestamp()]).reshape(1, 1, 1)
-    prediction_scaled = model.predict(X_input)
-    prediction = scaler.inverse_transform(prediction_scaled)
-    return prediction[0][0]
-# Example usage:
-predicted_open = predict_stock_prices(model_open, scaler_open)
-predicted_high = predict_stock_prices(model_high, scaler_high)
-predicted_close = predict_stock_prices(model_close, scaler_close)
-predicted_volume = predict_stock_prices(model_volume, scaler_volume)
-print("Predicted Open:", predicted_open)
-print("Predicted High:", predicted_high)
-print("Predicted Close:", predicted_close)
-print("Predicted Volume:", predicted_volume)
+for i, ax in enumerate(axs.flat):
+    if i < 5:
+        ax.plot(X, y[:, i], label=df.columns[i+1])
+        ax.set_xlabel('Day')
+        ax.set_ylabel(df.columns[i+1])
+        ax.legend()
 
+plt.show()
