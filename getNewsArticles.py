@@ -1,4 +1,5 @@
 from newsapi import NewsApiClient
+import json
 
 newsapi = NewsApiClient(api_key='d7f4f06cb623498587f38f5107c19bf5')
 all_articles = newsapi.get_everything(q='Apple', language='en', sort_by = 'publishedAt')
@@ -6,27 +7,16 @@ all_articles = newsapi.get_everything(q='Apple', language='en', sort_by = 'publi
 no_of_articles = 0
 
 with open('NewsArticles.txt', 'w') as file:
+    articles_data = []
     for article in all_articles['articles']:
-        file.write('Title: ' + article['title'] + '\n')
-        if article['description'] is not None:
-            file.write('Description: ' + article['description'] + '\n')
-        else:
-            file.write('Description: N/A\n')
-        if article['content'] is not None:
-            file.write('Content: ' + article['content'] + '\n')
-        else:
-            file.write('Content: N/A\n')
-        file.write('Source: ' + article['source']['name'] + '\n')
-        file.write('Published At: ' + article['publishedAt'] + '\n')
-        file.write('URL: ' + article['url'] + '\n\n')
-        no_of_articles += 1
+        article_data = {
+            'title': article['title'],
+            'date': article['publishedAt'],
+            'description': article['description'] if article['description'] is not None else 'N/A',
+            'content': article['content'] if article['content'] is not None else 'N/A'
+        }
+        articles_data.append(article_data)
+    file_path = "articles.json"
+    with open(file_path, "w") as json_file:
+        json.dump(articles_data, json_file, indent=4)
 
-print(no_of_articles," articles collected.")
-
-with open('NewsContent.txt', 'w') as file:
-    for article in all_articles['articles']:
-        file.write('Title: ' + article['title'] + '\n')
-        if article['description'] is not None:
-            file.write('Description: ' + article['description'] + '\n')
-        if article['content'] is not None:
-            file.write('Content: ' + article['content'] + '\n')
