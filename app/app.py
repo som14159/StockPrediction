@@ -168,41 +168,36 @@ def predict_price(symbol):
 
 def final_layer(sentiment_score,close,date,symbol):
         fl = {}
+        w1 = 1
+        w2 = 1
+        final_close = 200.0
         try:
-            print("fILE FOUND")
             with open(symbol+'.json', 'r') as file:
                 fl = json.load(file)
             data = pd.read_csv(symbol+'DailyStockPrices.csv')
-            print("fILE FOUND")
-            # Then you can use loc to filter based on the datetime value
-            data['date'] = pd.to_datetime(df['date'])
+            data['date'] = pd.to_datetime(data['date'])
             data.set_index('date', inplace=True)
             def get_close_price(date_string):
                 date = pd.to_datetime(date_string)
-                try:
-                    close_price = data.loc[date]['4. close']
-                    return close_price
-                except KeyError:
-                    return "Date not found"
-
-            date_string = "2024-02-15"
-            close_price = get_close_price(date_string)
-            print(f"The close price for {date_string} is: {close_price}")
+                close_price = data.loc[date]['4. close']
+                return close_price
+            true_close = get_close_price(fl['date'])
             print("Close",true_close)
-            w1 = fl['w1'] + ((true_close - fl['final_close']) * fl['score'] * 0.05)
-            w2 = fl['w2'] + ((true_close - fl['final_close']) * fl['close'] * 0.05)
-            final_close = w1 * sentiment_score + w2 * close
-            print(w1+"hi"+w2)
-            fl = {  
-                'score':sentiment_score,
-                'close':close,
-                'final_close':final_close,
-                'date':date,
-                'w1':w1,
-                'w2':w2,
-            }
-            with open(symbol+'.json','w') as json_file:
-                json.dump(fl,json_file,indent = 4)
+            if fl['date'] != date:
+                w1 = fl['w1'] + ((true_close - fl['final_close']) * fl['score'] * 0.005)
+                w2 = fl['w2'] + ((true_close - fl['final_close']) * fl['close'] * 0.00000005)
+                final_close = w1 * sentiment_score + w2 * close
+                print(w1,w2)
+                fl = {  
+                    'score':sentiment_score,
+                    'close':close,
+                    'final_close':final_close,
+                    'date':date,
+                    'w1':w1,
+                    'w2':w2,
+                }
+                with open(symbol+'.json','w') as json_file:
+                    json.dump(fl,json_file,indent = 4)
         except Exception as e :
             print(e)
             final_close = close + sentiment_score
@@ -216,6 +211,7 @@ def final_layer(sentiment_score,close,date,symbol):
             }
             with open(symbol+'.json','w') as json_file:
                 json.dump(fl,json_file,indent = 4)
+        return final_close
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -228,10 +224,10 @@ def index():
         # get_news(symbol)
         ts = predict_score()
         lstm_close,date_now = predict_price(symbol)
-        final_layer(ts,lstm_close,date_now,symbol)
+        fc = final_layer(ts,lstm_close,date_now,symbol)
         with open('articles.json', 'r') as file:
             articles_data = json.load(file)
-    return render_template('index.html', plot_data=plot_data,articles_data=articles_data,score=ts,ss="Sentiment Score :")
+    return render_template('index.html', plot_data=plot_data,articles_data=articles_data,score=ts,ss="Sentiment Score :",fc=fc)
 
 if __name__ == '__main__':
     app.run(debug=True)
