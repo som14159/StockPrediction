@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Data Plot</title>
+    <!-- Include Plotly.js -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap" rel="stylesheet">
+    <style>
+        body{
+            font-family: "DM Sans", sans-serif;
+        }
+        #fc,#score{
+            font-size: 1.5em;
+            text-align: center;
+        }
+        h2{
+            font-size: 2.5em;
+            text-align: center;
+        }
+        #articles{
+            background-color: rgb(250, 243, 235);
+            width: 80vw; 
+            height: 70vh;
+            margin-top: 8vh;
+            padding-top: 8vh;
+            padding-right: 5vh;
+            font-size: 1.5em;
+            font-family: "DM Sans", sans-serif;
+            margin-left: 10vw;
+            padding-left: 7vh;
+            align-self: center;
+            overflow-y: auto;
+            border-width:3px; border-style:solid; border-color:black; 
+        }
+    </style>
+</head>
+<body>
+    <h1>Stock Data Plot</h1>
+    <form action="/" method="post">
+        Select Stock:
+        <select id="symbols" name="symbols">
+            <option value="MSFT">Microsoft Corporation (MSFT)</option>
+            <option value="AAPL">Apple Inc. (AAPL)</option>
+            <option value="GOOGL">Alphabet Inc. (GOOGL)</option>
+        </select><br><br><br>
+        <input type="submit" value="Predict Stock Price"/>
+    </form>
+
+    <div id="plotly-chart">
+        <!-- Plotly chart will be rendered here -->
+    </div>
+    <div id="fc">
+        <b>Tommorow's Prediction :</b>{{fc}}
+        <br/>
+    </div>
+    <br/>
+    <br/>
+    <div id="score">
+        <b>{{ss}}</b>{{score}}
+        <br/>
+    </div>
+
+    <h2>Latest News</h2>
+    <div id="articles">
+        {% for article in articles_data %}
+            <h3>{{ article.title }}</h3>
+            <p>{{ article.description }}</p>
+        {% endfor %}
+    </div>
+
+    <script>
+        // Load graphJSON from Flask app
+        var graphJSON = JSON.parse('{{ plot_data|safe }}');
+
+
+        // Render Plotly chart
+        Plotly.newPlot('plotly-chart', graphJSON);
+    </script>
+</body>
+</html>
